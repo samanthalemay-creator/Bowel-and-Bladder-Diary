@@ -587,15 +587,15 @@
                     `"${date}"`,
                     `"${time}"`,
                     `"${entryTypeFormatted}"`,
-                    `"${entry.urge || ''}"`,
-                    `"${entry.amount || ''}"`,
-                    `"${entry.consistency ? entry.consistency.split(':')[0] : ''}"`,
-                    `"${entry.urgency || ''}"`,
-                    `"${entry.leakage || ''}"`,
-                    `"${entry.leakageActivity || ''}"`,
-                    `"${entry.padUsage || ''}"`,
-                    `"${entry.beverageType || ''}"`,
-                    `"${entry.beverageAmount || ''}"`,
+                    `"${entry.urge || ''}"`, // Urge Level (urination only)
+                    `"${entry.amount || ''}"`, // Urination Amount (urination only)
+                    `"${entry.consistency ? entry.consistency.split(':')[0] : ''}"`, // Bowel Consistency (bowel only)
+                    `"${entry.urgency || ''}"`, // Urgency Level (bowel only)
+                    `"${entry.leakage || ''}"`, // Leakage (urination and bowel)
+                    `"${entry.leakageActivity || ''}"`, // Leakage Activity (urination and bowel)
+                    `"${entry.padUsage || ''}"`, // Pad/Brief Usage (urination and bowel)
+                    `"${entry.beverageType || ''}"`, // Beverage Type (beverage only)
+                    `"${entry.beverageAmount || ''}"`, // Beverage Amount (beverage only)
                     `""` // Notes column for future use
                 ];
                 csvRows.push(row.join(','));
