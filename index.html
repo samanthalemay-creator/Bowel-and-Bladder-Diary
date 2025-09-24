@@ -1,1 +1,649 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bladder & Bowel Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .message-box {
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        @keyframes fadein {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        @keyframes fadeout {
+            from { opacity: 1; }
+            to   { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
+    <div id="message-container" class="fixed top-4 z-50 w-full flex justify-center"></div>
+
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden">
+        <header class="bg-indigo-600 text-white p-6 md:p-8 rounded-t-2xl">
+            <h1 class="text-3xl font-bold text-center">Bladder & Bowel Tracker</h1>
+        </header>
+        
+        <main class="p-6 md:p-8">
+            <div id="patientInfoSection" class="mb-8 pt-6 border-t border-gray-200">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Patient Information</h2>
+                <form id="patientInfoForm" class="space-y-4">
+                    <div>
+                        <label for="patientName" class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                        <input type="text" id="patientName" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., Jane Doe">
+                    </div>
+                    <div>
+                        <label for="patientDOB" class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                        <input type="date" id="patientDOB" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="primaryPhysician" class="block text-sm font-medium text-gray-700 mb-2">Referring Physician</label>
+                        <input type="text" id="primaryPhysician" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., Dr. Smith">
+                    </div>
+                    <div>
+                        <label for="reasonForVisit" class="block text-sm font-medium text-gray-700 mb-2">Reason for using tracker</label>
+                        <textarea id="reasonForVisit" rows="3" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., Pelvic floor therapy, incontinence issues"></textarea>
+                    </div>
+                    <button type="submit" id="savePatientInfoBtn" class="w-full py-3 px-6 bg-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:bg-indigo-700 transition-colors">
+                        Save Information
+                    </button>
+                </form>
+            </div>
+
+            <form id="trackerForm" class="space-y-6">
+                <div>
+                    <label for="entryType" class="block text-sm font-medium text-gray-700 mb-2">Entry Type</label>
+                    <select id="entryType" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="urination">Urination</option>
+                        <option value="bowelMovement">Bowel Movement</option>
+                        <option value="beverage">Beverage</option>
+                    </select>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Time & Date</h3>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-1">
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="radio" name="timeMode" value="now" class="text-indigo-600" checked>
+                                <span class="text-sm font-medium text-gray-700">Use current time</span>
+                            </label>
+                            <div id="currentTimeDisplay" class="text-sm text-gray-600 bg-white p-2 rounded border">
+                                Current: <span id="currentTimeText"></span>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="radio" name="timeMode" value="manual" class="text-indigo-600">
+                                <span class="text-sm font-medium text-gray-700">Enter specific time</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="date" id="manualDate" class="p-2 text-sm rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-100" disabled>
+                                <input type="time" id="manualTime" class="p-2 text-sm rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-100" disabled>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="urination-fields" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Urge</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urge" value="None" class="sr-only peer" checked>
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">None</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urge" value="Weak" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Weak</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urge" value="Medium" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Medium</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urge" value="Strong" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Strong</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="urinationAmount" class="block text-sm font-medium text-gray-700 mb-2">Urination Amount (oz)</label>
+                        <input type="number" id="urinationAmount" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., 8">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Leakage</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urinationLeakage" value="Yes" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Yes</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urinationLeakage" value="No" class="sr-only peer" checked>
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">No</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="urinationLeakageActivityContainer" class="hidden">
+                        <label for="urinationLeakageActivity" class="block text-sm font-medium text-gray-700 mb-2">What you were doing when leakage occurred?</label>
+                        <input type="text" id="urinationLeakageActivity" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., coughing, running, lifting">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Pad/Brief/Guard Usage</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urinationPadUsage" value="Not changed" class="sr-only peer" checked>
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Not changed</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urinationPadUsage" value="Damp" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Damp</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urinationPadUsage" value="Wet" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Wet</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urinationPadUsage" value="Soaked" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Soaked</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bowel-fields" class="space-y-6 hidden">
+                    <div>
+                        <label for="consistency" class="block text-sm font-medium text-gray-700 mb-2">Bowel Movement Type (Bristol Stool Chart)</label>
+                        <select id="consistency" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="Type 1: Separate hard lumps">Type 1 - Separate hard lumps, like nuts (hard to pass)</option>
+                            <option value="Type 2: Lumpy sausage">Type 2 - Sausage-shaped but lumpy</option>
+                            <option value="Type 3: Sausage with cracks">Type 3 - Like a sausage but with cracks on surface</option>
+                            <option value="Type 4: Smooth, soft sausage" selected>Type 4 - Like a sausage or snake, smooth and soft (normal)</option>
+                            <option value="Type 5: Soft blobs">Type 5 - Soft blobs with clear cut edges</option>
+                            <option value="Type 6: Mushy">Type 6 - Fluffy pieces with ragged edges, mushy</option>
+                            <option value="Type 7: Liquid">Type 7 - Watery, no solid pieces, entirely liquid</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Urgency</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urgency" value="None" class="sr-only peer" checked>
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">None</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urgency" value="Weak" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Weak</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urgency" value="Medium" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Medium</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="urgency" value="Strong" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Strong</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Leakage</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="bowelLeakage" value="Yes" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Yes</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="bowelLeakage" value="No" class="sr-only peer" checked>
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">No</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="bowelLeakageActivityContainer" class="hidden">
+                        <label for="bowelLeakageActivity" class="block text-sm font-medium text-gray-700 mb-2">What you were doing when leakage occurred?</label>
+                        <input type="text" id="bowelLeakageActivity" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., coughing, running, lifting">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Pad/Brief/Guard Usage</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="bowelPadUsage" value="Not changed" class="sr-only peer" checked>
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Not changed</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="bowelPadUsage" value="Damp" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Damp</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="bowelPadUsage" value="Wet" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Wet</span>
+                            </label>
+                            <label class="flex-1 min-w-0">
+                                <input type="radio" name="bowelPadUsage" value="Soaked" class="sr-only peer">
+                                <span class="block w-full py-2 px-4 text-center border border-gray-300 rounded-lg text-sm transition-colors peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500">Soaked</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="beverage-fields" class="space-y-6 hidden">
+                    <div>
+                        <label for="beverageType" class="block text-sm font-medium text-gray-700 mb-2">Beverage Type</label>
+                        <input type="text" id="beverageType" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., Water, coffee, soda">
+                    </div>
+                    <div>
+                        <label for="beverageAmount" class="block text-sm font-medium text-gray-700 mb-2">Beverage Amount (oz)</label>
+                        <input type="number" id="beverageAmount" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., 12">
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full py-3 px-6 bg-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:bg-indigo-700 transition-colors">
+                    Add Entry
+                </button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-800">Entry History</h2>
+                    <div class="flex space-x-2">
+                        <button id="exportCsvBtn" class="py-2 px-4 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                            Export CSV
+                        </button>
+                        <button id="clearDataBtn" class="py-2 px-4 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                            Clear All Data
+                        </button>
+                    </div>
+                </div>
+                <div id="entriesList" class="space-y-4">
+                    <!-- Entries will be dynamically inserted here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize data
+        let entries = JSON.parse(localStorage.getItem('bladderBowelEntries') || '[]');
+        let patientInfo = JSON.parse(localStorage.getItem('patientInfo') || '{}');
+
+        // Utility functions
+        function showMessage(message, type = 'success') {
+            const container = document.getElementById('message-container');
+            const messageBox = document.createElement('div');
+            messageBox.textContent = message;
+            messageBox.className = `message-box py-2 px-4 rounded-full text-white shadow-lg text-sm ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            container.appendChild(messageBox);
+
+            setTimeout(() => {
+                messageBox.remove();
+            }, 3000);
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('bladderBowelEntries', JSON.stringify(entries));
+        }
+
+        function savePatientInfo() {
+            localStorage.setItem('patientInfo', JSON.stringify(patientInfo));
+        }
+
+        function updateCurrentTimeDisplay() {
+            const now = new Date();
+            document.getElementById('currentTimeText').textContent = now.toLocaleString();
+        }
+
+        function setupTimeMode() {
+            const timeModeRadios = document.querySelectorAll('input[name="timeMode"]');
+            const manualDate = document.getElementById('manualDate');
+            const manualTime = document.getElementById('manualTime');
+            
+            // Set default values for manual inputs
+            const now = new Date();
+            manualDate.value = now.toISOString().split('T')[0];
+            manualTime.value = now.toTimeString().slice(0, 5);
+            
+            timeModeRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === 'manual') {
+                        manualDate.disabled = false;
+                        manualTime.disabled = false;
+                        manualDate.classList.remove('bg-gray-100');
+                        manualTime.classList.remove('bg-gray-100');
+                    } else {
+                        manualDate.disabled = true;
+                        manualTime.disabled = true;
+                        manualDate.classList.add('bg-gray-100');
+                        manualTime.classList.add('bg-gray-100');
+                    }
+                });
+            });
+        }
+
+        function getEntryTimestamp() {
+            const timeMode = document.querySelector('input[name="timeMode"]:checked').value;
+            
+            if (timeMode === 'now') {
+                return new Date().toISOString();
+            } else {
+                const date = document.getElementById('manualDate').value;
+                const time = document.getElementById('manualTime').value;
+                return new Date(`${date}T${time}`).toISOString();
+            }
+        }
+
+        function loadPatientInfo() {
+            if (patientInfo.name) {
+                document.getElementById('patientName').value = patientInfo.name || '';
+                document.getElementById('patientDOB').value = patientInfo.dob || '';
+                document.getElementById('primaryPhysician').value = patientInfo.primaryPhysician || '';
+                document.getElementById('reasonForVisit').value = patientInfo.reason || '';
+                document.getElementById('savePatientInfoBtn').textContent = 'Update Information';
+            }
+        }
+
+        function renderEntries() {
+            const entriesList = document.getElementById('entriesList');
+            entriesList.innerHTML = '';
+            
+            if (entries.length === 0) {
+                entriesList.innerHTML = '<p class="text-center text-gray-500">No entries yet. Add one above!</p>';
+                return;
+            }
+
+            const sortedEntries = [...entries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            sortedEntries.forEach((entry, index) => {
+                const entryElement = document.createElement('div');
+                entryElement.className = 'bg-gray-50 p-4 rounded-xl shadow-sm border border-gray-200';
+                
+                const entryDate = new Date(entry.timestamp);
+                const dateStr = entryDate.toLocaleDateString();
+                const timeStr = entryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const date = `${dateStr} ${timeStr}`;
+                
+                let details = '';
+
+                if (entry.entryType === 'urination') {
+                    details = `
+                        <p><strong>Urge:</strong> ${entry.urge}</p>
+                        <p><strong>Amount:</strong> ${entry.amount} oz</p>
+                        <p><strong>Leakage:</strong> ${entry.leakage}</p>
+                        ${entry.leakage === 'Yes' ? `<p><strong>Activity:</strong> ${entry.leakageActivity}</p>` : ''}
+                        <p><strong>Pad Usage:</strong> ${entry.padUsage}</p>
+                    `;
+                } else if (entry.entryType === 'bowelMovement') {
+                    details = `
+                        <p><strong>Consistency:</strong> ${entry.consistency}</p>
+                        <p><strong>Urgency:</strong> ${entry.urgency}</p>
+                        <p><strong>Leakage:</strong> ${entry.leakage}</p>
+                        ${entry.leakage === 'Yes' ? `<p><strong>Activity:</strong> ${entry.leakageActivity}</p>` : ''}
+                        <p><strong>Pad Usage:</strong> ${entry.padUsage}</p>
+                    `;
+                } else if (entry.entryType === 'beverage') {
+                    details = `
+                        <p><strong>Beverage Type:</strong> ${entry.beverageType}</p>
+                        <p><strong>Beverage Amount:</strong> ${entry.beverageAmount} oz</p>
+                    `;
+                }
+                
+                entryElement.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-semibold text-lg capitalize text-indigo-700">${entry.entryType.replace(/([A-Z])/g, ' $1')}</h3>
+                        <div class="text-sm text-gray-500">${date}</div>
+                    </div>
+                    <div class="text-gray-600 text-sm space-y-1">
+                        ${details}
+                    </div>
+                    <button class="delete-btn mt-4 w-full py-2 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors" data-index="${index}">
+                        Delete
+                    </button>
+                `;
+                entriesList.appendChild(entryElement);
+            });
+            
+            // Add delete button event listeners
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const originalIndex = parseInt(e.target.dataset.index);
+                    const entryToDelete = sortedEntries[originalIndex];
+                    const actualIndex = entries.findIndex(entry => 
+                        entry.timestamp === entryToDelete.timestamp && 
+                        entry.entryType === entryToDelete.entryType
+                    );
+                    
+                    if (actualIndex !== -1) {
+                        entries.splice(actualIndex, 1);
+                        saveToLocalStorage();
+                        renderEntries();
+                        showMessage('Entry deleted successfully.');
+                    }
+                });
+            });
+        }
+
+        // Event Listeners
+        document.getElementById('patientInfoForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            patientInfo = {
+                name: document.getElementById('patientName').value,
+                dob: document.getElementById('patientDOB').value,
+                primaryPhysician: document.getElementById('primaryPhysician').value,
+                reason: document.getElementById('reasonForVisit').value,
+                timestamp: new Date().toISOString()
+            };
+            
+            savePatientInfo();
+            document.getElementById('savePatientInfoBtn').textContent = 'Update Information';
+            showMessage('Patient information saved successfully!');
+        });
+
+        document.getElementById('trackerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const entryType = document.getElementById('entryType').value;
+            let newEntry = { 
+                entryType, 
+                timestamp: getEntryTimestamp() 
+            };
+
+            if (entryType === 'urination') {
+                newEntry.urge = document.querySelector('input[name="urge"]:checked').value;
+                newEntry.amount = document.getElementById('urinationAmount').value;
+                newEntry.leakage = document.querySelector('input[name="urinationLeakage"]:checked').value;
+                newEntry.leakageActivity = newEntry.leakage === 'Yes' ? document.getElementById('urinationLeakageActivity').value : '';
+                newEntry.padUsage = document.querySelector('input[name="urinationPadUsage"]:checked').value;
+            } else if (entryType === 'bowelMovement') {
+                newEntry.consistency = document.getElementById('consistency').value;
+                newEntry.urgency = document.querySelector('input[name="urgency"]:checked').value;
+                newEntry.leakage = document.querySelector('input[name="bowelLeakage"]:checked').value;
+                newEntry.leakageActivity = newEntry.leakage === 'Yes' ? document.getElementById('bowelLeakageActivity').value : '';
+                newEntry.padUsage = document.querySelector('input[name="bowelPadUsage"]:checked').value;
+            } else if (entryType === 'beverage') {
+                newEntry.beverageType = document.getElementById('beverageType').value;
+                newEntry.beverageAmount = document.getElementById('beverageAmount').value;
+            }
+
+            entries.push(newEntry);
+            saveToLocalStorage();
+            renderEntries();
+            document.getElementById('trackerForm').reset();
+            
+            // Reset time mode to current time after submission
+            document.querySelector('input[name="timeMode"][value="now"]').checked = true;
+            document.getElementById('manualDate').disabled = true;
+            document.getElementById('manualTime').disabled = true;
+            document.getElementById('manualDate').classList.add('bg-gray-100');
+            document.getElementById('manualTime').classList.add('bg-gray-100');
+            
+            showMessage('Entry added successfully!');
+        });
+
+        // Entry type change handler
+        document.getElementById('entryType').addEventListener('change', (e) => {
+            const urinationFields = document.getElementById('urination-fields');
+            const bowelFields = document.getElementById('bowel-fields');
+            const beverageFields = document.getElementById('beverage-fields');
+            
+            urinationFields.classList.add('hidden');
+            bowelFields.classList.add('hidden');
+            beverageFields.classList.add('hidden');
+            
+            if (e.target.value === 'urination') {
+                urinationFields.classList.remove('hidden');
+            } else if (e.target.value === 'bowelMovement') {
+                bowelFields.classList.remove('hidden');
+            } else if (e.target.value === 'beverage') {
+                beverageFields.classList.remove('hidden');
+            }
+        });
+
+        // Leakage activity handlers
+        document.querySelectorAll('input[name="urinationLeakage"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const container = document.getElementById('urinationLeakageActivityContainer');
+                if (e.target.value === 'Yes') {
+                    container.classList.remove('hidden');
+                } else {
+                    container.classList.add('hidden');
+                }
+            });
+        });
+
+        document.querySelectorAll('input[name="bowelLeakage"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const container = document.getElementById('bowelLeakageActivityContainer');
+                if (e.target.value === 'Yes') {
+                    container.classList.remove('hidden');
+                } else {
+                    container.classList.add('hidden');
+                }
+            });
+        });
+
+        // Export CSV functionality
+        document.getElementById('exportCsvBtn').addEventListener('click', () => {
+            if (entries.length === 0) {
+                showMessage('No data to export.', 'error');
+                return;
+            }
+
+            const csvRows = [];
+
+            // Add patient information header section (only name and DOB)
+            csvRows.push('PATIENT INFORMATION');
+            csvRows.push(`"Patient Name:","${patientInfo.name || 'Not provided'}"`);
+            csvRows.push(`"Date of Birth:","${patientInfo.dob || 'Not provided'}"`);
+            csvRows.push(''); // Empty row for separation
+
+            // Create comprehensive CSV headers for data entries
+            csvRows.push('TRACKING ENTRIES');
+            const headers = [
+                'Date',
+                'Time', 
+                'Entry Type',
+                'Urge Level',
+                'Urination Amount (oz)',
+                'Bowel Consistency',
+                'Urgency Level',
+                'Leakage (Yes/No)',
+                'Leakage Activity',
+                'Pad/Brief Usage',
+                'Beverage Type',
+                'Beverage Amount (oz)',
+                'Notes'
+            ];
+
+            csvRows.push(headers.join(','));
+
+            // Sort entries by timestamp (most recent first)
+            const sortedEntries = [...entries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            sortedEntries.forEach(entry => {
+                const entryDate = new Date(entry.timestamp);
+                const date = entryDate.toLocaleDateString();
+                const time = entryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                // Format entry type with proper capitalization
+                let entryTypeFormatted = '';
+                if (entry.entryType === 'urination') {
+                    entryTypeFormatted = 'Urination';
+                } else if (entry.entryType === 'bowelMovement') {
+                    entryTypeFormatted = 'Bowel Movement';
+                } else if (entry.entryType === 'beverage') {
+                    entryTypeFormatted = 'Beverage';
+                }
+
+                const row = [
+                    `"${date}"`,
+                    `"${time}"`,
+                    `"${entryTypeFormatted}"`,
+                    `"${entry.urge || ''}"`, // Urge Level (urination only)
+                    `"${entry.amount || ''}"`, // Urination Amount (urination only)
+                    `"${entry.consistency ? entry.consistency.split(':')[0] : ''}"`, // Bowel Consistency (bowel only)
+                    `"${entry.urgency || ''}"`, // Urgency Level (bowel only)
+                    `"${entry.leakage || ''}"`, // Leakage (urination and bowel)
+                    `"${entry.leakageActivity || ''}"`, // Leakage Activity (urination and bowel)
+                    `"${entry.padUsage || ''}"`, // Pad/Brief Usage (urination and bowel)
+                    `"${entry.beverageType || ''}"`, // Beverage Type (beverage only)
+                    `"${entry.beverageAmount || ''}"`, // Beverage Amount (beverage only)
+                    `""` // Notes column for future use
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            // Generate filename with patient name if available
+            let filename = 'bladder_bowel_diary';
+            if (patientInfo.name && patientInfo.name.trim()) {
+                // Clean the name for filename (remove special characters)
+                const cleanName = patientInfo.name.trim().replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+                filename = `${cleanName}_bladder_bowel_diary`;
+            }
+            filename += `_${new Date().toISOString().split('T')[0]}.csv`;
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showMessage('Data exported successfully! Open in Excel or Google Sheets for best viewing.');
+        });
+
+        // Clear all data functionality
+        document.getElementById('clearDataBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                entries = [];
+                patientInfo = {};
+                localStorage.removeItem('bladderBowelEntries');
+                localStorage.removeItem('patientInfo');
+                renderEntries();
+                document.getElementById('patientInfoForm').reset();
+                document.getElementById('savePatientInfoBtn').textContent = 'Save Information';
+                showMessage('All data cleared successfully.');
+            }
+        });
+
+        // Initialize the app
+        updateCurrentTimeDisplay();
+        setInterval(updateCurrentTimeDisplay, 1000);
+        setupTimeMode();
+        loadPatientInfo();
+        renderEntries();
+    </script>
+</body>
+</html>
