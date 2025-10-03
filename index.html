@@ -663,9 +663,9 @@
     </div>
 
     <script>
-        // Initialize data - using in-memory storage for this version
-        let entries = [];
-        let patientInfo = {};
+        // Initialize data
+        let entries = JSON.parse(localStorage.getItem('bladderBowelEntries') || '[]');
+        let patientInfo = JSON.parse(localStorage.getItem('patientInfo') || '{}');
 
         // Utility functions
         function showMessage(message, type = 'success') {
@@ -680,6 +680,14 @@
                     messageBox.remove();
                 }
             }, 3000);
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('bladderBowelEntries', JSON.stringify(entries));
+        }
+
+        function savePatientInfo() {
+            localStorage.setItem('patientInfo', JSON.stringify(patientInfo));
         }
 
         function updateCurrentTimeDisplay() {
@@ -802,6 +810,7 @@
                     
                     if (actualIndex !== -1) {
                         entries.splice(actualIndex, 1);
+                        saveToLocalStorage();
                         renderEntries();
                         showMessage('Entry deleted successfully.');
                     }
@@ -819,6 +828,7 @@
                 timestamp: new Date().toISOString()
             };
             
+            savePatientInfo();
             document.getElementById('savePatientInfoBtn').textContent = 'Update Information';
             showMessage('Patient information saved successfully!');
         });
@@ -841,4 +851,228 @@
             } else if (entryType === 'bowelMovement') {
                 newEntry.consistency = document.getElementById('consistency').value || '';
                 newEntry.urgency = document.querySelector('input[name="urgency"]:checked')?.value || 'None';
-                new
+                newEntry.leakage = document.querySelector('input[name="bowelLeakage"]:checked')?.value || 'No';
+                newEntry.leakageActivity = newEntry.leakage === 'Yes' ? (document.getElementById('bowelLeakageActivity').value || '') : '';
+                newEntry.padUsage = document.querySelector('input[name="bowelPadUsage"]:checked')?.value || 'Not changed';
+            } else if (entryType === 'beverage') {
+                newEntry.beverageType = document.getElementById('beverageType').value || '';
+                newEntry.beverageAmount = document.getElementById('beverageAmount').value || '';
+            }
+            
+            entries.push(newEntry);
+            saveToLocalStorage();
+            renderEntries();
+            document.getElementById('trackerForm').reset();
+            
+            // Reset time mode to current time after submission
+            document.querySelector('input[name="timeMode"][value="now"]').checked = true;
+            document.getElementById('manualDate').disabled = true;
+            document.getElementById('manualTime').disabled = true;
+            
+            showMessage('Entry added successfully!');
+        });
+
+        // Entry type change handler
+        document.getElementById('entryType').addEventListener('change', (e) => {
+            const urinationFields = document.getElementById('urination-fields');
+            const bowelFields = document.getElementById('bowel-fields');
+            const beverageFields = document.getElementById('beverage-fields');
+            
+            urinationFields.classList.add('hidden');
+            bowelFields.classList.add('hidden');
+            beverageFields.classList.add('hidden');
+            
+            if (e.target.value === 'urination') {
+                urinationFields.classList.remove('hidden');
+            } else if (e.target.value === 'bowelMovement') {
+                bowelFields.classList.remove('hidden');
+            } else if (e.target.value === 'beverage') {
+                beverageFields.classList.remove('hidden');
+            }
+        });
+
+        // Leakage activity handlers
+        document.querySelectorAll('input[name="urinationLeakage"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const container = document.getElementById('urinationLeakageActivityContainer');
+                if (e.target.value === 'Yes') {
+                    container.classList.remove('hidden');
+                } else {
+                    container.classList.add('hidden');
+                }
+            });
+        });
+
+        document.querySelectorAll('input[name="bowelLeakage"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const container = document.getElementById('bowelLeakageActivityContainer');
+                if (e.target.value === 'Yes') {
+                    container.classList.remove('hidden');
+                } else {
+                    container.classList.add('hidden');
+                }
+            });
+        });
+
+        // Export CSV functionality
+        document.getElementById('exportCsvBtn').addEventListener('click', () => {
+            if (entries.length === 0) {
+                showMessage('No data to export.', 'error');
+                return;
+            }
+
+            const csvRows = [];
+
+            // Add patient information header section
+            csvRows.push('PATIENT INFORMATION');
+            csvRows.push(`"Patient Name","${patientInfo.name || 'Not provided'}"`);
+            csvRows.push(`"Date of Birth","${patientInfo.dob || 'Not provided'}"`);
+            csvRows.push(''); // Empty row for separation
+
+            // Create comprehensive CSV headers for data entries
+            csvRows.push('TRACKING ENTRIES');
+            const headers = [
+                'Date',
+                'Time', 
+                'Entry Type',
+                'Urge Level',
+                'Urination Amount (oz)',
+                'Bowel Consistency',
+                'Urgency Level',
+                'Leakage (Yes/No)',
+                'Leakage Activity',
+                'Pad/Brief Usage',
+                'Beverage Type',
+                'Beverage Amount (oz)'
+            ];
+
+            csvRows.push(headers.map(h => `"${h}"`).join(','));
+
+            // Sort entries by timestamp (most recent first)
+            const sortedEntries = [...entries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            sortedEntries.forEach((entry) => {
+                const entryDate = new Date(entry.timestamp);
+                const date = entryDate.toLocaleDateString();
+                const time = entryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                // Format entry type with proper capitalization
+                let entryTypeFormatted = '';
+                if (entry.entryType === 'urination') {
+                    entryTypeFormatted = 'Urination';
+                } else if (entry.entryType === 'bowelMovement') {
+                    entryTypeFormatted = 'Bowel Movement';
+                } else if (entry.entryType === 'beverage') {
+                    entryTypeFormatted = 'Beverage';
+                }
+
+                // Build the row data systematically
+                const row = [
+                    date || '',
+                    time || '',
+                    entryTypeFormatted || '',
+                    entry.urge || '', // Urge Level (urination only)
+                    entry.amount || '', // Urination Amount (urination only)
+                    entry.consistency || '', // Full bowel consistency description
+                    entry.urgency || '', // Urgency Level (bowel only)  
+                    entry.leakage || '', // Leakage (urination and bowel)
+                    entry.leakageActivity || '', // Leakage Activity (urination and bowel when applicable)
+                    entry.padUsage || '', // Pad/Brief Usage (urination and bowel)
+                    entry.beverageType || '', // Beverage Type (beverage only)
+                    entry.beverageAmount || '' // Beverage Amount (beverage only)
+                ];
+                
+                // Properly escape and quote each field
+                const escapedRow = row.map(field => {
+                    const stringField = String(field);
+                    // Escape quotes by doubling them
+                    const escapedField = stringField.replace(/"/g, '""');
+                    return `"${escapedField}"`;
+                });
+                
+                csvRows.push(escapedRow.join(','));
+            });
+
+            // Generate filename with patient name if available
+            let filename = 'bladder_bowel_diary';
+            if (patientInfo.name && patientInfo.name.trim()) {
+                // Clean the name for filename (remove special characters)
+                const cleanName = patientInfo.name.trim().replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+                filename = `${cleanName}_bladder_bowel_diary`;
+            }
+            filename += `_${new Date().toISOString().split('T')[0]}.csv`;
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showMessage('Data exported successfully! Open in Excel or Google Sheets for best viewing.');
+        });
+
+        // Clear all data functionality
+        document.getElementById('clearDataBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                entries = [];
+                patientInfo = {};
+                localStorage.removeItem('bladderBowelEntries');
+                localStorage.removeItem('patientInfo');
+                renderEntries();
+                document.getElementById('patientInfoForm').reset();
+                document.getElementById('savePatientInfoBtn').textContent = 'Save Information';
+                showMessage('All data cleared successfully.');
+            }
+        });
+
+        // Initialize the app
+        updateCurrentTimeDisplay();
+        setInterval(updateCurrentTimeDisplay, 1000);
+        setupTimeMode();
+        loadPatientInfo();
+        renderEntries();
+        setupRadioButtons();
+
+        // Setup radio button click handlers
+        function setupRadioButtons() {
+            document.querySelectorAll('.radio-option span').forEach(span => {
+                span.addEventListener('click', function() {
+                    const radio = this.previousElementSibling;
+                    if (radio && radio.type === 'radio') {
+                        radio.checked = true;
+                        
+                        // Trigger change event for any handlers
+                        radio.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+            });
+
+            // Also ensure actual radio inputs work
+            document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // Update visual state by forcing a recheck
+                    const allRadiosInGroup = document.querySelectorAll(`input[name="${this.name}"]`);
+                    allRadiosInGroup.forEach(r => {
+                        const span = r.nextElementSibling;
+                        if (span) {
+                            if (r.checked) {
+                                span.style.backgroundColor = '#4f46e5';
+                                span.style.color = 'white';
+                                span.style.borderColor = '#4f46e5';
+                            } else {
+                                span.style.backgroundColor = '';
+                                span.style.color = '';
+                                span.style.borderColor = '#d1d5db';
+                            }
+                        }
+                    });
+                });
+            });
+        }
+    </script>
+</body>
+</html>
